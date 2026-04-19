@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Extension Popup</title>
+  <style>
+    body { background:#222; color:#eee; font-family:Arial, sans-serif; margin:10px; }
+    select, button { margin:5px 0; padding:4px; }
+    #mappingList { list-style-type: disc; margin-left:20px; }
+    .section { margin-top:10px; }
+  </style>
+</head>
+<body>
+  <h2>Tab Selection</h2>
+  <div class="section">
+    <label for="sourceTabSelect">Source Tab:</label>
+    <select id="sourceTabSelect"></select>
+    <button id="setSourceBtn">Set Source</button><span id="sourceStatus"></span>
+  </div>
+  <div class="section">
+    <label for="targetTabSelect">Target Tab:</label>
+    <select id="targetTabSelect"></select>
+    <button id="setTargetBtn">Set Target</button><span id="targetStatus"></span>
+  </div>
+  <div class="section" id="sourceElementsSection" style="display:none;">
+    <h3>Source Elements</h3>
+    <select id="sourceElementSelect"></select>
+  </div>
+  <div class="section" id="targetElementsSection" style="display:none;">
+    <h3>Target Elements</h3>
+    <select id="targetElementSelect"></select>
+  </div>
+  <div class="section" style="display:none;">
+    <button id="addMappingBtn">Add Mapping</button>
+    <ul id="mappingList"></ul>
+  </div>
+  <div class="section">
+    <button id="startTransferBtn">Start Transfer</button>
+  </div>
+  <div class="section" id="status"></div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

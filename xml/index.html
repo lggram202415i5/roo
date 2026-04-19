@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML to C++ Code Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #000000;
+            color: #d4d4d4;
+        }
+
+        .toolbar {
+            padding: 15px 20px;
+            background-color: #000000;
+            border-bottom: 1px solid #333333;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .toolbar button {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #uploadBtn {
+            background-color: #000000;
+            color: white;
+            border: 1px solid #333333;
+        }
+
+        #uploadBtn:hover {
+            background-color: #808080;
+        }
+
+        #generateBtn {
+            background-color: #000000;
+            color: white;
+            border: 1px solid #333333;
+        }
+
+        #generateBtn:hover {
+            background-color: #808080;
+        }
+
+        #generateBtn:disabled {
+            background-color: #000000;
+            border-color: #333333;
+            color: #666666;
+            cursor: not-allowed;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .define-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 20px;
+        }
+
+        .define-input {
+            padding: 8px 12px;
+            font-size: 13px;
+            background-color: #000000;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+        .define-input:focus {
+            outline: none;
+            border-color: #0e639c;
+        }
+
+        .define-label {
+            font-size: 13px;
+            color: #d4d4d4;
+            font-weight: 600;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 10px 15px;
+            background-color: #000000;
+            border-bottom: 1px solid #333333;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .panel:first-child {
+            border-right: 1px solid #333333;
+        }
+
+        .panel-content {
+            flex: 1;
+            padding: 15px;
+            overflow: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        #xmlContent {
+            background-color: #000000;
+            color: #9cdcfe;
+        }
+
+        #cppContent {
+            background-color: #000000;
+            color: #dcdcaa;
+        }
+
+        .placeholder {
+            color: #6a6a6a;
+            font-style: italic;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333333;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555555;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button id="uploadBtn">📁 XML 업로드</button>
+        <button id="generateBtn" disabled>⚙️ C++ 코드 생성</button>
+        <input type="file" id="fileInput" accept=".xml">
+        <div class="define-group">
+            <span class="define-label">#define</span>
+            <input type="text" id="defineName" class="define-input" placeholder="Name">
+            <input type="text" id="defineValue" class="define-input" placeholder="Value">
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <div class="panel-header">XML 내용</div>
+            <div id="xmlContent" class="panel-content"><span class="placeholder">XML 파일을 업로드하면 여기에 내용이 표시됩니다...</span></div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">C++ 코드</div>
+            <div id="cppContent" class="panel-content"><span class="placeholder">C++ 코드가 여기에 생성됩니다...</span></div>
+        </div>
+    </div>
+
+    <script>
+        let currentXmlContent = '';
+        let currentXmlName = '';
+        let currentDefineName = '';
+        let currentDefineValue = '';
+
+        const uploadBtn = document.getElementById('uploadBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const fileInput = document.getElementById('fileInput');
+        const xmlContent = document.getElementById('xmlContent');
+        const cppContent = document.getElementById('cppContent');
+        const defineNameInput = document.getElementById('defineName');
+        const defineValueInput = document.getElementById('defineValue');
+
+        // Define 입력 처리
+        defineNameInput.addEventListener('input', (e) => {
+            currentDefineName = e.target.value.trim();
+        });
+
+        defineValueInput.addEventListener('input', (e) => {
+            currentDefineValue = e.target.value.trim();
+        });
+
+        // XML 파일 업로드 버튼 클릭
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 파일 선택 시 처리
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.name.endsWith('.xml')) {
+                currentXmlName = file.name;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    currentXmlContent = event.target.result;
+                    xmlContent.textContent = currentXmlContent;
+                    generateBtn.disabled = false;
+                    cppContent.innerHTML = '<span class="placeholder">C++ 코드가 여기에 생성됩니다...</span>';
+                };
+                reader.readAsText(file);
+            } else {
+                alert('XML 파일을 선택해주세요.');
+            }
+            fileInput.value = ''; // 같은 파일을 다시 선택할 수 있도록 초기화
+        });
+
+        // C++ 코드 생성 버튼 클릭
+        generateBtn.addEventListener('click', () => {
+            if (currentXmlContent) {
+                const cppCode = generateCppCode(currentXmlContent, currentXmlName);
+                cppContent.textContent = cppCode;
+            }
+        });
+
+        // XML 분석하여 C++ 코드 생성
+        // DOM Path 표현 규칙: XPath 스타일 사용
+        function generateCppCode(xmlContent, fileName) {
+            let cppCode = `// Generated from ${fileName}\n`;
+            cppCode += `// Generated at ${new Date().toISOString()}\n\n`;
+            
+            // Define macros
+            if (currentDefineName) {
+                cppCode += `#define ${currentDefineName} ${currentDefineValue}\n\n`;
+            }
+            
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+                
+                // XML 파싱 오류 확인
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    throw new Error('Invalid XML format');
+                }
+
+                // 루트 요소 정보 추출
+                const rootElement = xmlDoc.documentElement;
+                
+                cppCode += `// ============================================\n`;
+                cppCode += `// XML Structure Analysis (XPath)\n`;
+                cppCode += `// ============================================\n\n`;
+                
+                // XPath 트리를 재귀적으로 생성
+                function buildXPathTree(element, parentPath = '', indexMap = {}) {
+                    let result = '';
+                    const tagName = element.tagName;
+                    
+                    // 같은 태그명의 형제 요소 인덱스 추적
+                    if (!indexMap[tagName]) {
+                        indexMap[tagName] = 0;
+                    }
+                    indexMap[tagName]++;
+                    const currentIndex = indexMap[tagName];
+                    
+                    // XPath 생성
+                    let xpath;
+                    if (!parentPath) {
+                        xpath = `/${tagName}`;
+                    } else {
+                        // 같은 부모 아래 같은 태그명이 여러개 있는지 확인
+                        const parent = element.parentElement;
+                        const siblings = Array.from(parent.children).filter(c => c.tagName === tagName);
+                        if (siblings.length > 1) {
+                            const siblingIndex = Array.from(siblings).indexOf(element) + 1;
+                            xpath = `${parentPath}/${tagName}[${siblingIndex}]`;
+                        } else {
+                            xpath = `${parentPath}/${tagName}`;
+                        }
+                    }
+                    
+                    // 현재 요소 정보 출력
+                    result += `// XPath: ${xpath}\n`;
+                    result += `// Element: ${tagName}\n`;
+                    
+                    // 속성 정보
+                    if (element.attributes.length > 0) {
+                        result += `// Attributes:\n`;
+                        for (let i = 0; i < element.attributes.length; i++) {
+                            const attr = element.attributes[i];
+                            result += `//   @${attr.name} = "${attr.value}"\n`;
+                            // 속성의 XPath
+                            result += `//   XPath: ${xpath}/@${attr.name}\n`;
+                        }
+                    }
+                    
+                    // 텍스트 콘텐츠
+                    const textContent = element.textContent.trim();
+                    if (textContent) {
+                        result += `// Text: "${textContent}"\n`;
+                    }
+                    
+                    result += `\n`;
+                    
+                    // 자식 요소 재귀 처리
+                    const childIndexMap = {};
+                    for (let i = 0; i < element.children.length; i++) {
+                        result += buildXPathTree(element.children[i], xpath, childIndexMap);
+                    }
+                    
+                    return result;
+                }
+                
+                cppCode += buildXPathTree(rootElement);
+                
+                cppCode += `// ============================================\n`;
+                cppCode += `// TODO: C++ Code Generation Rules\n`;
+                cppCode += `// ============================================\n\n`;
+                cppCode += `// DOM Path 표현 규칙: XPath 스타일\n`;
+                cppCode += `// 예시: /root/child/grandchild, /root/element[@id='1']\n\n`;
+                cppCode += `#include <iostream>\n\n`;
+                cppCode += `int main() {\n`;
+                cppCode += `    std::cout << "XPath-based XML analysis complete." << std::endl;\n`;
+                cppCode += `    std::cout << "Please define C++ generation rules." << std::endl;\n`;
+                cppCode += `    return 0;\n`;
+                cppCode += `}\n`;
+
+            } catch (error) {
+                cppCode += `// Error parsing XML: ${error.message}\n`;
+                cppCode += `// Please check your XML format\n\n`;
+                cppCode += `#include <iostream>\n\n`;
+                cppCode += `int main() {\n`;
+                cppCode += `    std::cout << "Error: Invalid XML format" << std::endl;\n`;
+                cppCode += `    return 1;\n`;
+                cppCode += `}\n`;
+            }
+
+            return cppCode;
+        }
+
+        // 값의 타입을 추론하여 C++ 타입 반환
+        function getCppType(value) {
+            if (value === 'true' || value === 'false') {
+                return 'bool';
+            }
+            if (/^-?\d+$/.test(value)) {
+                return 'int';
+            }
+            if (/^-?\d*\.\d+$/.test(value)) {
+                return 'double';
+            }
+            return 'std::string';
+        }
+
+        // 첫 글자를 대문자로 변환
+        function capitalizeFirstLetter(str) {
+            if (!str) return '';
+            return str.charAt(0).toUpperCase() + str.slice(1).replace(/[^a-zA-Z0-9]/g, '_');
+        }
+    </script>
+</body>
+</html>
